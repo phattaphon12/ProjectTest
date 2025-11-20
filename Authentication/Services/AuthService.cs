@@ -1,5 +1,7 @@
-﻿using Authentication.Models;
+﻿using Authentication.Helpers;
+using Authentication.Models;
 using Authentication.Repositories;
+using Microsoft.AspNetCore.Mvc;
 
 namespace Authentication.Services
 {
@@ -12,16 +14,25 @@ namespace Authentication.Services
             _authRepo = authRepo;
         }
 
-        public async Task<string> LoginAsync(LoginReq req)
+        public async Task<IActionResult> LoginAsync(LoginReq req)
         {
-            if (req == null) throw new Exception("Username and password is required");
+            if (req == null)
+            {
+                return ApiResult.Fail("Username and password are required.");
+            }
 
             User userInDB = await _authRepo.GetUserAsync(req.username);
-            if (userInDB == null) throw new Exception("No data");
+            if (userInDB == null || string.IsNullOrEmpty(userInDB.username))
+            {
+                return ApiResult.Fail("No data.");
+            }
 
-            if (userInDB.password != req.password) throw new Exception("Invalid password");
+            if (userInDB.password != req.password)
+            {
+                return ApiResult.Fail("Invalid password.");
+            }
 
-            return "Success";
+            return ApiResult.Success("Login Success");
         }
     }
 }

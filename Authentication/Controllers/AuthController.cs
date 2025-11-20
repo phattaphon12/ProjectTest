@@ -19,7 +19,7 @@ namespace Authentication.Controllers
         public async Task<IActionResult> Login([FromBody] LoginReq req)
         {
             var result = await _AuthService.LoginAsync(req);
-            return Ok(result);
+            return result;
         }
     }
 }
