@@ -21,5 +21,19 @@ namespace Authentication.Controllers
             var result = await _AuthService.LoginAsync(req);
             return result;
         }
+
+        [HttpPost("register")]
+        public async Task<IActionResult> Register([FromBody] RegisterReq req)
+        {
+            var result = await _AuthService.RegisterAsync(req);
+            return result;
+        }
+
+        [HttpPost("change-password")]
+        public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordReq req)
+        {
+            var result = await _AuthService.ChangePasswordAsync(req);
+            return result;
+        }
     }
 }
