@@ -35,5 +35,19 @@ namespace Authentication.Controllers
             var result = await _AuthService.ChangePasswordAsync(req);
             return result;
         }
+
+        [HttpPost("logout")]
+        public async Task<IActionResult> Logout([FromBody] LogoutReq req)
+        {
+            var result = await _AuthService.LogoutAsync(req.UserId);
+            return result;
+        }
+
+        [HttpPost("refresh-token")]
+        public async Task<IActionResult> RefreshToken([FromBody] RefreshTokenReq req)
+        {
+            var result = await _AuthService.RefreshAccessTokenAsync(req.refreshToken);
+            return result;
+        }
     }
 }

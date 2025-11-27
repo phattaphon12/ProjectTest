@@ -19,9 +19,7 @@ namespace Authentication.Repositories
             var result = new User();
             var sql = @"SELECT user_id,
 	                    username,
-                        password,
-                        create_date,
-                        update_date
+                        password
                 FROM FactoryDB.user
                 WHERE username = @Username";
 
@@ -40,10 +38,63 @@ namespace Authentication.Repositories
                             {
                                 user_id = reader.GetInt32("user_id"),
                                 username = reader.GetString("username"),
-                                password = reader.GetString("password"),
-                                create_date = reader.GetDateTime("create_date"),
-                                update_date = reader.GetDateTime("update_date")
+                                password = reader.GetString("password")
                             };
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+
+        public async Task<User> GetUserByIdAsync(int UserId)
+        {
+            var result = new User();
+            var sql = @"SELECT user_id,
+                        username,
+                        password
+                FROM FactoryDB.user
+                WHERE user_id = @UserId";
+            using (var connection = _context.CreateConnection())
+            {
+                await connection.OpenAsync();
+                using (var command = new MySqlCommand(sql, connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", UserId);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        if (await reader.ReadAsync())
+                        {
+                            result = new User
+                            {
+                                user_id = reader.GetInt32("user_id"),
+                                username = reader.GetString("username"),
+                                password = reader.GetString("password")
+                            };
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+
+        public async Task<List<int>> GetRoleIdByUserIdAsync(int UserId)
+        {
+            var result = new List<int>();
+            var sql = @"SELECT role_id
+                        FROM user_role
+                        WHERE user_id = @UserId";
+            using (var connection = _context.CreateConnection())
+            {
+                await connection.OpenAsync();
+                using (var command = new MySqlCommand(sql, connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", UserId);
+                    using (var reader = await command.ExecuteReaderAsync())
+                    {
+                        while (await reader.ReadAsync())
+                        {
+                            result.Add(reader.GetInt32("role_id"));
                         }
                     }
                 }

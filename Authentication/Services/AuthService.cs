@@ -9,17 +9,29 @@ namespace Authentication.Services
     public class AuthService
     {
         private readonly AuthRepository _authRepo;
+        private readonly TokenRepository _tokenRepo;
+        private readonly TokenService _tokenService;
 
-        public AuthService(AuthRepository authRepo)
+        public AuthService(
+            AuthRepository authRepo,
+            TokenRepository tokenRepo,
+            TokenService tokenService)
         {
             _authRepo = authRepo;
+            _tokenRepo = tokenRepo;
+            _tokenService = tokenService;
         }
 
         public async Task<IActionResult> LoginAsync(LoginReq req)
         {
-            if (req == null)
+            if (string.IsNullOrEmpty(req.username))
             {
-                return ApiResult.Fail("Username and password are required.");
+                return ApiResult.Fail("Username is required.");
+            }
+
+            if (string.IsNullOrEmpty(req.password))
+            {
+                return ApiResult.Fail("Password is required.");
             }
 
             User userInDB = await _authRepo.GetUserAsync(req.username);
@@ -34,7 +46,28 @@ namespace Authentication.Services
                 return ApiResult.Fail("Invalid password.");
             }
 
-            return ApiResult.Success("Login Success");
+            List<int> roleIds = await _authRepo.GetRoleIdByUserIdAsync(userInDB.user_id);
+            if (roleIds == null || !roleIds.Any())
+            {
+                return ApiResult.Fail("No role assigned.");
+            }
+
+            var authResult = _tokenService.GenerateAccessToken(userInDB.user_id, userInDB.username, roleIds);
+            var refreshToken = _tokenService.GenerateRefreshToken();
+
+            var saveRefreshToken = await _tokenRepo.SaveRefreshTokenAsync(userInDB.user_id, refreshToken);
+            if (saveRefreshToken <= 0)
+            {
+                return ApiResult.Fail("Login failed.");
+            }
+
+            var result = new LoginRes
+            {
+                accessToken = authResult,
+                refreshToken = refreshToken
+            };
+
+            return ApiResult.Success(result);
         }
 
         public async Task<IActionResult> RegisterAsync(RegisterReq req)
@@ -107,6 +140,70 @@ namespace Authentication.Services
             }
 
             return ApiResult.Success("Change password success.");
+        }
+
+        public async Task<IActionResult> LogoutAsync(string username)
+        {
+            if (string.IsNullOrEmpty(username))
+            {
+                return ApiResult.Fail("Username is required.");
+            }
+
+            var rowsAffected = await _tokenRepo.RevokeRefreshTokenAsync(username);
+            if (rowsAffected <= 0)
+            {
+                return ApiResult.Fail("Logout failed.");
+            }
+
+            return ApiResult.Success("Logout success.");
+        }
+
+        public async Task<IActionResult> RefreshAccessTokenAsync(string refreshToken)
+        {
+            if (string.IsNullOrEmpty(refreshToken))
+            {
+                return ApiResult.Fail("Refresh token is required.");
+            }
+
+            var authResult = await _tokenRepo.GetDataByRefreshTokenAsync(refreshToken);
+            if (authResult == null)
+            {
+                return ApiResult.Fail("Invalid refresh token.");
+            }
+
+            if (authResult.expire_date <= DateTime.Now || authResult.revoke_date != null)
+            {
+                return ApiResult.Fail("Refresh token expired.");
+            }
+
+            User userInDB = await _authRepo.GetUserByIdAsync(authResult.user_id);
+            if (string.IsNullOrEmpty(userInDB.username))
+            {
+                return ApiResult.Fail("No data.");
+            }
+
+            List<int> roleIds = await _authRepo.GetRoleIdByUserIdAsync(userInDB.user_id);
+            if (roleIds == null || !roleIds.Any())
+            {
+                return ApiResult.Fail("No role assigned.");
+            }
+
+            var newAccessToken = _tokenService.GenerateAccessToken(userInDB.user_id, userInDB.username, roleIds);
+            var newRefreshToken = _tokenService.GenerateRefreshToken();
+
+            var saveRefreshToken = await _tokenRepo.SaveRefreshTokenAsync(userInDB.user_id, newRefreshToken);
+            if (saveRefreshToken <= 0)
+            {
+                return ApiResult.Fail("Login failed.");
+            }
+
+            var result = new LoginRes
+            {
+                accessToken = newAccessToken,
+                refreshToken = newRefreshToken
+            };
+
+            return ApiResult.Success(result);
         }
     }
 }
