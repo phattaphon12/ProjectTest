@@ -93,10 +93,20 @@ namespace Authentication.Services
 
             req.password = hashedPassword;
 
-            var rowsAffected = await _authRepo.RegisterUserAsync(req);
-            if (rowsAffected <= 0)
+            var rowsAffectedRegister = await _authRepo.RegisterUserAsync(req);
+            if (rowsAffectedRegister <= 0)
             {
                 return ApiResult.Fail("Register failed.");
+            }
+
+            if (checkUsername == null || string.IsNullOrEmpty(checkUsername.username))
+            {
+                checkUsername = await _authRepo.GetUserAsync(req.username);
+            }
+            var rowsAffectedUserRole = await _authRepo.InsertRoleUserAsync(checkUsername.user_id);
+            if (rowsAffectedUserRole <= 0)
+            {
+                return ApiResult.Fail("Assign role failed.");
             }
 
             return ApiResult.Success("Register Success");
@@ -142,14 +152,14 @@ namespace Authentication.Services
             return ApiResult.Success("Change password success.");
         }
 
-        public async Task<IActionResult> LogoutAsync(string username)
+        public async Task<IActionResult> LogoutAsync(int userId)
         {
-            if (string.IsNullOrEmpty(username))
+            if (userId <= 0)
             {
-                return ApiResult.Fail("Username is required.");
+                return ApiResult.Fail("Invalid user ID.");
             }
 
-            var rowsAffected = await _tokenRepo.RevokeRefreshTokenAsync(username);
+            var rowsAffected = await _tokenRepo.RevokeRefreshTokenAsync(userId);
             if (rowsAffected <= 0)
             {
                 return ApiResult.Fail("Logout failed.");

@@ -120,6 +120,23 @@ namespace Authentication.Repositories
             }
         }
 
+        public async Task<int> InsertRoleUserAsync(int UserId)
+        {
+            var sql = @"INSERT INTO user_role (user_id, role_id)
+                        VALUES (@UserId, 3)";
+
+            using (var connection = _context.CreateConnection())
+            {
+                await connection.OpenAsync();
+                using (var command = new MySqlCommand(sql, connection))
+                {
+                    command.Parameters.AddWithValue("@UserId", UserId);
+                    var result = await command.ExecuteNonQueryAsync();
+                    return result;
+                }
+            }
+        }
+
         public async Task<int> ChangePasswordAsync(string Username, string Password)
         {
             var sql = @"UPDATE user

@@ -36,7 +36,7 @@ namespace Authentication.Repositories
             }
         }
 
-        public async Task<int> RevokeRefreshTokenAsync(string UserId)
+        public async Task<int> RevokeRefreshTokenAsync(int UserId)
         {
             var sql = @"UPDATE `refreshToken`
                         SET revoke_date = NOW(),

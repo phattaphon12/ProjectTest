@@ -1,6 +1,8 @@
 ﻿using Authentication.Models;
 using Authentication.Services;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using System.Security.Claims;
 
 namespace Authentication.Controllers
 {
@@ -36,10 +38,19 @@ namespace Authentication.Controllers
             return result;
         }
 
+        [Authorize]
         [HttpPost("logout")]
-        public async Task<IActionResult> Logout([FromBody] LogoutReq req)
+        public async Task<IActionResult> Logout()
         {
-            var result = await _AuthService.LogoutAsync(req.UserId);
+            var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier);
+
+            if (userIdClaim == null || !int.TryParse(userIdClaim.Value, out int userId))
+            {
+                // กรณีที่ไม่สามารถหา UserId ใน Token หรือแปลงเป็น int ไม่ได้
+                return Unauthorized("Invalid or missing user identifier in token.");
+            }
+
+            var result = await _AuthService.LogoutAsync(userId);
             return result;
         }
 
