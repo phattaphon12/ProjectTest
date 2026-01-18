@@ -22,9 +22,54 @@ namespace Authentication.Services
             _tokenService = tokenService;
         }
 
-        public async Task<IActionResult> LoginAsync(LoginReq req)
+        public async Task<LoginResult> LoginAsync(LoginReq req)
         {
             if (string.IsNullOrEmpty(req.username))
+            {
+                return new LoginResult { ErrorMessage = "Username is required." };
+            }
+
+            if (string.IsNullOrEmpty(req.password))
+            {
+                return new LoginResult { ErrorMessage = "Password is required." };
+            }
+
+            User userInDB = await _authRepo.GetUserAsync(req.username);
+            if (userInDB == null || string.IsNullOrEmpty(userInDB.username))
+            {
+                return new LoginResult { ErrorMessage = "No data." };
+            }
+
+            bool checkPassword = BCrypt.Net.BCrypt.Verify(req.password, userInDB.password);
+            if (!checkPassword)
+            {
+                return new LoginResult { ErrorMessage = "Invalid password." };
+            }
+
+            List<int> roleIds = await _authRepo.GetRoleIdByUserIdAsync(userInDB.user_id);
+            if (roleIds == null || !roleIds.Any())
+            {
+                return new LoginResult { ErrorMessage = "No role assigned." };
+            }
+
+            var authResult = _tokenService.GenerateAccessToken(userInDB.user_id, userInDB.username, roleIds);
+            var refreshToken = _tokenService.GenerateRefreshToken();
+
+            var saveRefreshToken = await _tokenRepo.SaveRefreshTokenAsync(userInDB.user_id, refreshToken);
+            if (saveRefreshToken <= 0)
+            {
+                return new LoginResult { ErrorMessage = "Login failed." };
+            }
+
+            var result = new LoginRes
+            {
+                accessToken = authResult,
+                refreshToken = refreshToken
+            };
+
+            return new LoginResult { Data = result };
+
+            /*if (string.IsNullOrEmpty(req.username))
             {
                 return ApiResult.Fail("Username is required.");
             }
@@ -67,7 +112,7 @@ namespace Authentication.Services
                 refreshToken = refreshToken
             };
 
-            return ApiResult.Success(result);
+            return ApiResult.Success(result);*/
         }
 
         public async Task<IActionResult> RegisterAsync(RegisterReq req)
@@ -124,7 +169,7 @@ namespace Authentication.Services
                 return ApiResult.Fail("Old password and new password same as.");
             }            
 
-            User userInDB = await _authRepo.GetUserAsync(req.username);
+            User userInDB = await _authRepo.GetUserByIdAsync(req.userId);
             if (string.IsNullOrEmpty(userInDB.username))
             {
                 return ApiResult.Fail("No data");
@@ -168,9 +213,56 @@ namespace Authentication.Services
             return ApiResult.Success("Logout success.");
         }
 
-        public async Task<IActionResult> RefreshAccessTokenAsync(string refreshToken)
+        public async Task<LoginResult> RefreshAccessTokenAsync(string refreshToken)
         {
             if (string.IsNullOrEmpty(refreshToken))
+            {
+                return new LoginResult { ErrorMessage = "Refresh token is required." };
+            }
+
+            var authResult = await _tokenRepo.GetDataByRefreshTokenAsync(refreshToken);
+            if (authResult == null)
+            {
+                return new LoginResult { ErrorMessage = "Invalid refresh token." };
+            }
+
+            if (authResult.expire_date <= DateTime.Now || authResult.revoke_date != null)
+            {
+                return new LoginResult { ErrorMessage = "Refresh token expired." };
+            }
+
+            User userInDB = await _authRepo.GetUserByIdAsync(authResult.user_id);
+            if (string.IsNullOrEmpty(userInDB.username))
+            {
+                return new LoginResult { ErrorMessage = "No data." };
+            }
+
+            List<int> roleIds = await _authRepo.GetRoleIdByUserIdAsync(userInDB.user_id);
+            if (roleIds == null || !roleIds.Any())
+            {
+                return new LoginResult { ErrorMessage = "No role assigned." };
+            }
+
+            await _tokenRepo.RevokeRefreshTokenByRfAsync(refreshToken);
+
+            var newAccessToken = _tokenService.GenerateAccessToken(userInDB.user_id, userInDB.username, roleIds);
+            var newRefreshToken = _tokenService.GenerateRefreshToken();
+
+            var saveRefreshToken = await _tokenRepo.SaveRefreshTokenAsync(userInDB.user_id, newRefreshToken);
+            if (saveRefreshToken <= 0)
+            {
+                return new LoginResult { ErrorMessage = "Refresh token failed." };
+            }
+
+            var result = new LoginRes
+            {
+                accessToken = newAccessToken,
+                refreshToken = newRefreshToken
+            };
+
+            return new LoginResult { Data = result };
+
+            /*if (string.IsNullOrEmpty(refreshToken))
             {
                 return ApiResult.Fail("Refresh token is required.");
             }
@@ -209,11 +301,10 @@ namespace Authentication.Services
 
             var result = new LoginRes
             {
-                accessToken = newAccessToken,
-                refreshToken = newRefreshToken
+                accessToken = newAccessToken
             };
 
-            return ApiResult.Success(result);
+            return ApiResult.Success(result, newRefreshToken);*/
         }
     }
 }

@@ -1,0 +1,6 @@
+@RecipeMicroservice_HostAddress = http://localhost:5028
+
+GET {{RecipeMicroservice_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

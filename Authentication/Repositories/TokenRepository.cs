@@ -55,6 +55,25 @@ namespace Authentication.Repositories
             }
         }
 
+        public async Task<int> RevokeRefreshTokenByRfAsync(string RefreshToken)
+        {
+            var sql = @"UPDATE `refreshToken`
+                        SET revoke_date = NOW(),
+                        refresh_token = ''
+                        WHERE refresh_token = @RefreshToken";
+
+            using (var connection = _context.CreateConnection())
+            {
+                await connection.OpenAsync();
+                using (var command = new MySqlCommand(sql, connection))
+                {
+                    command.Parameters.AddWithValue("@RefreshToken", RefreshToken);
+                    var result = await command.ExecuteNonQueryAsync();
+                    return result;
+                }
+            }
+        }
+
         public async Task<RefreshTokenDb> GetDataByRefreshTokenAsync(string RefreshToken)
         {
             var result = new RefreshTokenDb();

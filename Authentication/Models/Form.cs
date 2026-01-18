@@ -27,7 +27,7 @@ namespace Authentication.Models
 
     public class ChangePasswordReq
     {
-        public string username { get; set; } = string.Empty;
+        public int userId { get; set; }
         
         public string oldPassword { get; set; } = string.Empty;
         
@@ -44,5 +44,12 @@ namespace Authentication.Models
     public class RefreshTokenReq
     {
         public string refreshToken { get; set; } = string.Empty;
+    }
+
+    public class LoginResult
+    {
+        public LoginRes Data { get; set; } = new LoginRes();
+        public string ErrorMessage { get; set; } = string.Empty;
+        public bool IsSuccess => string.IsNullOrEmpty(ErrorMessage);
     }
 }
