@@ -13,4 +13,14 @@
         public DateTime update_date { get; set; }
         public bool flag { get; set; }
     }
+
+    public class RecipeFromPLC
+    {
+        public int DeptZ1 { get; set; }
+        public int DeptZ2 { get; set; }
+        public int WaferSizeZ1 { get; set; }
+        public int WaferSizeZ2 { get; set; }
+        public int LineZ1 { get; set; }
+        public int LineZ2 { get; set; }
+    }
 }

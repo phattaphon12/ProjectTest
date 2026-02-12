@@ -53,23 +53,27 @@ namespace RecipeMicroservice.Repositoties
             return results;
         }
 
-        public async Task<Recipe?> GetRecipeByLotIdAsync(FormGetRecipeByLotID req)
+        public async Task<List<Recipe>> GetRecipeByLotIdAsync(FormGetRecipeByLotID req)
         {
-            Recipe? recipe = null;
-            var sql = @"SELECT recipe_id, lot_id, wafer_size, cutting_dept, line_cut, created_by, created_date, updated_by, update_date, flag
+            //Recipe? recipe = null;
+            var sql = @"SELECT recipe_id, lot_id, wafer_size, cutting_dept, line_cut, 
+                               created_by, created_date, updated_by, update_date, flag
                         FROM recipe
-                        WHERE lot_id = @Lot_id AND flag IS true";
-            using (var connection = _context.CreateConnection())
+                        WHERE lot_id LIKE CONCAT('%', @Lot_id, '%') AND flag IS true
+                        ORDER BY created_date DESC";
+
+            using (var connections = _context.CreateConnection())
             {
-                await connection.OpenAsync();
-                using (var command = new MySqlCommand(sql, connection))
+                await connections.OpenAsync();
+                using (var command = new MySqlCommand(sql, connections))
                 {
                     command.Parameters.AddWithValue("@Lot_id", req.lot_id);
                     using (var reader = await command.ExecuteReaderAsync())
                     {
-                        if (await reader.ReadAsync())
+                        var results = new List<Recipe>();
+                        while (await reader.ReadAsync())
                         {
-                            recipe = new Recipe
+                            var recipe = new Recipe
                             {
                                 recipe_id = reader.GetInt32("recipe_id"),
                                 lot_id = reader.GetString("lot_id"),
@@ -82,11 +86,12 @@ namespace RecipeMicroservice.Repositoties
                                 update_date = reader.GetDateTime("update_date"),
                                 flag = reader.GetBoolean("flag")
                             };
+                            results.Add(recipe);
                         }
+                        return results;
                     }
                 }
             }
-            return recipe;
         }
 
         public async Task<int> InsertRecipeAsync(FormInsertRecipe req)
@@ -155,5 +160,7 @@ namespace RecipeMicroservice.Repositoties
                 }
             }
         }
+
+        
     }
 }

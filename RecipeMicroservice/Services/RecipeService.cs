@@ -17,7 +17,7 @@ namespace RecipeMicroservice.Services
             return await _recipeRepo.GetAllRecipesAsync();
         }
 
-        public async Task<Recipe?> GetRecipeByLotIdAsync(FormGetRecipeByLotID req)
+        public async Task<List<Recipe>> GetRecipeByLotIdAsync(FormGetRecipeByLotID req)
         {
             return await _recipeRepo.GetRecipeByLotIdAsync(req);
         }
