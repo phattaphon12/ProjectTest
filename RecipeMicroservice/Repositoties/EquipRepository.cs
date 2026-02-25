@@ -15,7 +15,7 @@ namespace RecipeMicroservice.Repositoties
 
         public async Task<List<Equip>> GetAllEquipAsync()
         {
-            var sql = @"SELECT equip_id, brand, model, created_by, created_date, updated_by, updated_date
+            var sql = @"SELECT equip_id, brand, model, created_by, created_date, updated_by, updated_date, flag
                         FROM equipment";
 
             using (var connection = _context.CreateConnection())
@@ -36,7 +36,8 @@ namespace RecipeMicroservice.Repositoties
                                 created_by = reader.GetString("created_by"),
                                 created_date = reader.GetDateTime("created_date"),
                                 updated_by = reader.GetString("updated_by"),
-                                updated_date = reader.GetDateTime("updated_date")
+                                updated_date = reader.GetDateTime("updated_date"),
+                                flag = reader.GetBoolean("flag")
                             };
                             equips.Add(equip);
                         }

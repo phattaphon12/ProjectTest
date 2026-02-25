@@ -11,6 +11,7 @@ namespace RecipeMicroservice.Models
         public DateTime created_date { get; set; }
         public string updated_by { get; set; } = string.Empty;
         public DateTime updated_date { get; set; }
+        public bool flag { get; set; }
     }
     public class EquipStatus
     {
