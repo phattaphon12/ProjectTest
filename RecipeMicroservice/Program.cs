@@ -4,50 +4,37 @@ using RecipeMicroservice.Services;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
-
 builder.Services.AddControllers();
-// Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
-
 builder.Services.AddHttpClient();
 
-// Connection Helper
+// DI 
 builder.Services.AddScoped<MariaDbContext>();
-
-// Repository
 builder.Services.AddScoped<RecipeRepository>();
 builder.Services.AddScoped<StatusEquipRepository>();
 builder.Services.AddScoped<EquipRepository>();
-
-// Services
 builder.Services.AddScoped<RecipeService>();
 builder.Services.AddScoped<StatusEquipServices>();
 builder.Services.AddScoped<EquipService>();
 builder.Services.AddScoped<WebSocketHandler>();
 
-// 1. กำหนด Policy
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AllowFrontend",
-        policy =>
-        {
-            policy.WithOrigins("http://localhost:5173")
-                  .AllowAnyHeader()
-                  .AllowAnyMethod()
-                  .AllowCredentials();
-        });
+    options.AddPolicy("AllowFrontend", policy =>
+    {
+        policy.SetIsOriginAllowed(origin => true) // สำหรับทดสอบใน Docker ให้ผ่านทุก Origin ก่อนได้
+              .AllowAnyHeader()
+              .AllowAnyMethod()
+              .AllowCredentials();
+    });
 });
 
 var app = builder.Build();
 
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+// แสดง Swagger เสมอถ้าต้องการ Test บน Docker ง่ายๆ
+app.UseSwagger();
+app.UseSwaggerUI();
 
 app.UseCors("AllowFrontend");
 
@@ -56,9 +43,7 @@ app.UseWebSockets(new WebSocketOptions
     KeepAliveInterval = TimeSpan.FromMinutes(2)
 });
 
-app.UseHttpsRedirection();
-app.UseAuthorization();
-
+// ย้าย Map WebSocket มาไว้ก่อน UseAuthorization (ถ้าไม่ได้ใช้ Auth กับ WS)
 app.Map("/ws", async (HttpContext context, WebSocketHandler handler) =>
 {
     if (context.WebSockets.IsWebSocketRequest)
@@ -72,10 +57,6 @@ app.Map("/ws", async (HttpContext context, WebSocketHandler handler) =>
     }
 });
 
-app.UseHttpsRedirection();
-
 app.UseAuthorization();
-
 app.MapControllers();
-
 app.Run();
