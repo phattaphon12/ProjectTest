@@ -28,7 +28,8 @@ namespace RecipeMicroservice.Repositoties
                     r.line_cut,
                     s.stage,
                     s.downloaded_by,
-                    s.downloaded_date
+                    s.downloaded_date,
+                    e.flag
                 FROM status s
                 INNER JOIN equipment e ON s.equip_id = e.equip_id
                 INNER JOIN recipe r ON s.recipe_id = r.recipe_id
@@ -54,7 +55,8 @@ namespace RecipeMicroservice.Repositoties
                                 line_cut = reader.GetInt32("line_cut"),
                                 stage = reader.IsDBNull("stage") ? string.Empty : reader.GetString("stage"),
                                 downloaded_by = reader.IsDBNull("downloaded_by") ? string.Empty : reader.GetString("downloaded_by"),
-                                downloaded_date = reader.GetDateTime("downloaded_date")
+                                downloaded_date = reader.GetDateTime("downloaded_date"),
+                                flag = reader.GetBoolean("flag")
                             };
                             statusEquipList.Add(statusEquip);
                         }

@@ -26,6 +26,7 @@ namespace RecipeMicroservice.Models
         public string stage { get; set; } = string.Empty;
         public string downloaded_by { get; set; } = string.Empty;
         public DateTime downloaded_date { get; set; }
+        public Boolean flag { get; set; }
     }
 
     public class FormUpdateStatusEquip

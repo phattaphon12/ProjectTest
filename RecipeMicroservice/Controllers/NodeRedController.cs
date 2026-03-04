@@ -1,5 +1,6 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using RecipeMicroservice.Models;
+using System.Net.Http; // แนะนำให้ใช้ IHttpClientFactory แทนการสร้าง new HttpClient() ทุกครั้ง
 
 namespace RecipeMicroservice.Controllers
 {
@@ -7,40 +8,58 @@ namespace RecipeMicroservice.Controllers
     [Route("api/[controller]")]
     public class NodeRedController : ControllerBase
     {
+        private readonly string _nodeRedBaseUrl;
+        private readonly IHttpClientFactory _httpClientFactory;
+
+        // ฉีด IConfiguration และ IHttpClientFactory เข้ามาผ่าน Constructor
+        public NodeRedController(IConfiguration configuration, IHttpClientFactory httpClientFactory)
+        {
+            // ดึงค่าจาก appsettings.json
+            _nodeRedBaseUrl = configuration.GetValue<string>("NodeRedSettings:BaseUrl");
+            _httpClientFactory = httpClientFactory;
+        }
+
         [HttpGet("upload-recipe")]
         public async Task<IActionResult> RequestFromNodeRed()
         {
-            string url = "http://127.0.0.1:1880/get-recipe-data";
-            using var client = new HttpClient();
+            string url = $"{_nodeRedBaseUrl}/get-recipe-data";
+            var client = _httpClientFactory.CreateClient();
 
-            var response = await client.GetAsync(url);
-            if (response.IsSuccessStatusCode)
+            try
             {
-                var recipe = await response.Content.ReadFromJsonAsync<RecipeFromPLC>();
-                return Ok(recipe); // จะได้ข้อมูล JSON ตามที่คุณต้องการ
+                var response = await client.GetAsync(url);
+                if (response.IsSuccessStatusCode)
+                {
+                    var recipe = await response.Content.ReadFromJsonAsync<RecipeFromPLC>();
+                    return Ok(recipe);
+                }
+                return BadRequest("Cannot connect to Node-RED");
             }
-            return BadRequest("Cannot connect to Node-RED");
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
+            }
         }
 
         [HttpPost("download-recipe")]
         public async Task<IActionResult> DownloadRecipe([FromBody] RecipeFromPLC req)
         {
-            // 2. ส่งข้อมูลไปยัง Node-RED
-            using (var client = new HttpClient())
-            {
-                // URL ของ Node-RED (เช่น http://raspberrypi.local:1880/receive-recipe)
-                string nodeRedUrl = "http://127.0.0.1:1880/receive-recipe"; 
+            string url = $"{_nodeRedBaseUrl}/receive-recipe";
+            var client = _httpClientFactory.CreateClient();
 
-                var response = await client.PostAsJsonAsync(nodeRedUrl, req);
+            try
+            {
+                var response = await client.PostAsJsonAsync(url, req);
 
                 if (response.IsSuccessStatusCode)
                 {
                     return Ok(new { message = "ส่งข้อมูลไปยัง Node-RED สำเร็จ" });
                 }
-                else
-                {
-                    return StatusCode(500, "ไม่สามารถเชื่อมต่อกับ Node-RED ได้");
-                }
+                return StatusCode(500, "ไม่สามารถเชื่อมต่อกับ Node-RED ได้");
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, $"Error: {ex.Message}");
             }
         }
     }
